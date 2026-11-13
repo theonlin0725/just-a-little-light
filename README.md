@@ -14,6 +14,8 @@
 [迭代日志](docs/ITERATION.md) ·
 [后续版本](docs/ROADMAP.md)
 
+[![test](https://github.com/theonlin0725/just-a-little-light/actions/workflows/test.yml/badge.svg)](https://github.com/theonlin0725/just-a-little-light/actions/workflows/test.yml)
+
 </div>
 
 > 这是一个作品集仓库，不只是一个游戏 Demo。
