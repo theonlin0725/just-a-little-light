@@ -41,7 +41,7 @@
   <img src="assets/screens/lv01_hold.jpg" width="240" alt="全部点亮后连续保持 2.9 / 3 秒" />
   <img src="assets/screens/win.jpg" width="240" alt="通关结算：影子落位" />
 </p>
-<p align="center"><sub>把光拖到正确的位置 → 守住 3 秒（图里是 2.9 秒）→ 结算。所有画面都是 Canvas 实时绘制，没有一张美术素材。</sub></p>
+<p align="center"><sub>把光拖到正确的位置 → 守住 3 秒（图里是 2.9 秒）→ 结算。游戏内所有画面都是 Canvas 实时绘制，没有一张美术素材。</sub></p>
 
 ### 为什么是 IAA（应用内广告），而不是内购
 
