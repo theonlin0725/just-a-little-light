@@ -1,0 +1,17 @@
+{
+  "buildId": "d41bb877a15d",
+  "builtAt": "2026-10-26T14:00:18.378Z",
+  "channel": "release",
+  "appid": "wxa2d0086126adf6fb",
+  "adUnitId": null,
+  "qa": false,
+  "minified": true,
+  "libVersion": "2.32.3",
+  "bytes": 110299,
+  "sha256": "6070160aaef67d8f28016a05e6b3d2c1cc6ec05ef0476bfa7009bad8b6a14b81",
+  "files": [
+    "game.js",
+    "game.json",
+    "project.config.json"
+  ]
+}

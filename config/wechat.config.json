@@ -1,0 +1,8 @@
+{
+  "_comment": "微信小游戏构建配置。appid 填小游戏 AppID；adUnitId 填流量主后台的激励视频广告位 ID。敏感私钥不要写在这里。npm run build:wechat 会同时产出 wechat/（正式）与 wechat-dev/（QA），无需在这里切换。",
+  "appid": "wxa2d0086126adf6fb",
+  "projectname": "就差一点光",
+  "libVersion": "2.32.3",
+  "adUnitId": "",
+  "description": "就差一点光 · 光影解谜小游戏"
+}

@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>wx harness</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #stage{display:block}
+  #result{position:fixed;left:0;top:0;z-index:9;font:11px ui-monospace,monospace;color:#0f0;background:rgba(0,0,0,.82);padding:6px;white-space:pre;max-width:100%}
+</style>
+</head>
+<body>
+<div id="result">RUNNING</div>
+<script>
+// ---- 微信小游戏 API 的浏览器替身，只实现游戏真正用到的那部分 ----
+(function () {
+  // 帧计数：跑到第 N 帧就停，保证 headless 能退出、截图能拿到确定的一帧
+  const realRaf = window.requestAnimationFrame.bind(window);
+  let frames = 0;
+  window.__frames = () => frames;
+  function stopAndSnap() {
+    window.__rafStop = true;
+    if (location.search.includes('shot')) {
+      const c = document.getElementById('stage');
+      const div = document.createElement('div');
+      div.id = 'snap';
+      div.style.display = 'none';
+      div.textContent = c.toDataURL('image/png');
+      document.body.appendChild(div);
+    }
+  }
+  window.requestAnimationFrame = (cb) => {
+    if (window.__rafStop) return 0;
+    frames++;
+    if (frames >= (window.__snapAtFrame || 900)) return realRaf((t) => { cb(t); stopAndSnap(); });
+    return realRaf(cb);
+  };
+
+  const sys = { windowWidth: 390, windowHeight: 844, pixelRatio: 3, screenWidth: 390, screenHeight: 844,
+                safeArea: { top: 47, bottom: 810, left: 0, right: 390 } };
+  const store = {};
+  const handlers = { start: [], move: [], end: [], cancel: [], show: [], hide: [], resize: [] };
+  let first = true;
+  const created = [];
+  const adLog = { created: 0, show: 0, load: 0 };
+  let adInstance = null;
+
+  window.wx = {
+    __fire(kind, ev) { handlers[kind].forEach((f) => f(ev)); },
+    __adLog: adLog,
+    __store: store,
+    __sys: sys,
+    getSystemInfoSync: () => sys,
+    getWindowInfo: () => sys,
+    __setSize(w, h) { sys.windowWidth = w; sys.windowHeight = h; sys.screenWidth = w; sys.screenHeight = h; sys.safeArea = { top: 47, bottom: h - 34, left: 0, right: w }; },
+    getMenuButtonBoundingClientRect: () => ({ top: 54, bottom: 86, left: 291, right: 383, width: 92, height: 32 }),
+    createCanvas() {
+      const c = document.createElement('canvas');
+      if (first) {
+        first = false;
+        c.id = 'stage';
+        // 上屏画布交给页面显示，尺寸由游戏自己设置
+        c.style.width = sys.windowWidth + 'px';
+        c.style.height = sys.windowHeight + 'px';
+        document.body.appendChild(c);
+      }
+      created.push(c);
+      return c;
+    },
+    onTouchStart: (f) => handlers.start.push(f),
+    onTouchMove: (f) => handlers.move.push(f),
+    onTouchEnd: (f) => handlers.end.push(f),
+    onTouchCancel: (f) => handlers.cancel.push(f),
+    onShow: (f) => handlers.show.push(f),
+    onHide: (f) => handlers.hide.push(f),
+    onWindowResize: (f) => handlers.resize.push(f),
+    getStorageSync: (k) => (k in store ? store[k] : ''),
+    setStorageSync: (k, v) => { store[k] = v; },
+    showShareMenu() {},
+    onShareAppMessage() {},
+    shareAppMessage() {},
+    canvasToTempFilePath(o) { o.success && o.success({ tempFilePath: 'tmp.png' }); },
+    saveImageToPhotosAlbum(o) { o.success && o.success(); },
+    createRewardedVideoAd(opts) {
+      adLog.created++;
+      adLog.adUnitId = opts && opts.adUnitId;
+      const closeCbs = [];
+      const errorCbs = [];
+      adInstance = {
+        onClose(f) { closeCbs.push(f); },
+        onError(f) { errorCbs.push(f); },
+        load() { adLog.load++; return Promise.resolve(); },
+        show() { adLog.show++; return Promise.resolve(); },
+        __close(res) { closeCbs.forEach((f) => f(res)); },
+        __error(err) { errorCbs.forEach((f) => f(err)); },
+      };
+      return adInstance;
+    },
+  };
+  window.__ad = () => adInstance;
+})();
+</script>
+<script src="../wechat-dev/game.js"></script>
+<script>
+window.addEventListener('error', (e) => {
+  const el = document.getElementById('result');
+  if (el) el.textContent = 'ERROR ' + e.message + '\n' + (e.error && e.error.stack ? e.error.stack : '');
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const el = document.getElementById('result');
+  if (el) el.textContent = 'REJECT ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason);
+});
+(async function () {
+ const SHOT = location.search.includes('shot');
+ const DEMO = location.search.includes('demo');
+ if (DEMO) {
+   const g = window.__qa && window.__qa.game;
+   if (g && !location.search.includes('home')) { g.startLevel(24); g.fade = 0; g.modal = null; }
+   if (g && location.search.includes('home')) { g.fade = 0; }
+   document.getElementById('result').style.display = 'none';
+   window.__snapAtFrame = 30;
+   return;
+ }
+ try {
+  const out = [];
+  const ok = (c, m) => out.push(`${c ? 'PASS' : 'FAIL'} ${m}`);
+  const qsOk = () => true;
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const qa = window.__qa;
+  const game = qa && qa.game;
+
+  ok(!!qa, 'QA 入口存在（QA 构建）');
+  ok(!!game, 'Game 实例已创建');
+  if (game) {
+    ok(qa.stamp.includes('levels=60'), `内容版本自报：${qa.stamp}`);
+
+    // 布局：不看 scale 变量，直接看"内容在画布上占多大、在不在中间"
+    await wait(120);
+    const L = qa.layout();
+    const cv = document.getElementById('stage');
+    ok(cv.width === L.canvas.w && cv.height === L.canvas.h, `canvas backing ${cv.width}x${cv.height} 与上报一致`);
+    const cr = L.content;
+    const eps = 2;
+    ok(cr.x >= -eps && cr.y >= -eps, `内容没有被裁到画布外 (${cr.x.toFixed(1)},${cr.y.toFixed(1)})`);
+    ok(cr.x + cr.w <= L.canvas.w + eps && cr.y + cr.h <= L.canvas.h + eps, '内容没有溢出画布');
+    ok(Math.abs(cr.x + cr.w / 2 - L.canvas.w / 2) <= eps, '水平居中');
+    ok(cr.w / L.canvas.w > 0.95, `宽度铺满 ${((cr.w / L.canvas.w) * 100).toFixed(1)}%`);
+    ok(cr.h / L.canvas.h > 0.75, `高度覆盖 ${((cr.h / L.canvas.h) * 100).toFixed(1)}%`);
+    ok(cr.y >= (Math.max(L.safeTop, L.capsuleBottom) + 6) * L.dpr - eps, '顶部避开胶囊');
+    ok(cr.y + cr.h <= L.canvas.h - (L.safeBottom + 6) * L.dpr + eps, '底部避开 home indicator');
+
+    // 渲染：等两帧再取样
+    await wait(160);
+    const c = document.getElementById('stage');
+    ok(c && c.width === Math.round(390 * L.dpr) && c.height === Math.round(844 * L.dpr),
+      `画布按 DPR(${L.dpr}) 放大 ${c && c.width}x${c && c.height}`);
+    ok(L.dpr <= 2, `微信端默认 standard 档，DPR 上限 2（实际 ${L.dpr}）`);
+    // 真的去数像素：非背景像素的包围盒必须落在内容矩形里且居中
+    // 首帧可能在淡入，采样不到就重试几次，避免偶发失败
+    const PW = 160, PH = 346;
+    const probe = document.createElement('canvas');
+    probe.width = PW; probe.height = PH;
+    const pctx = probe.getContext('2d');
+    let minX = PW, maxX = -1, minY = PH, maxY = -1, lit = 0;
+    for (let attempt = 0; attempt < 5 && lit <= 20; attempt++) {
+      if (attempt) await wait(100);
+      minX = PW; maxX = -1; minY = PH; maxY = -1; lit = 0;
+      pctx.clearRect(0, 0, PW, PH);
+      pctx.drawImage(c, 0, 0, PW, PH);
+      const d = pctx.getImageData(0, 0, PW, PH).data;
+      for (let y = 0; y < PH; y++) {
+        for (let x = 0; x < PW; x++) {
+          const i = (y * PW + x) * 4;
+          if (d[i] + d[i + 1] + d[i + 2] > 60) {
+            lit++;
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+          }
+        }
+      }
+    }
+    ok(lit > 20, `画面上有可见内容（${lit} 个取样点）`);
+
+    // 背景必须铺满整个画布：最上一行、最下一行都不能是纯黑信箱条
+    {
+      const d = pctx.getImageData(0, 0, PW, PH).data;
+      const rowSum = (y) => {
+        let m = 0;
+        for (let x = 0; x < PW; x++) {
+          const i = (y * PW + x) * 4;
+          m = Math.max(m, d[i] + d[i + 1] + d[i + 2]);
+        }
+        return m;
+      };
+      const top = rowSum(1);
+      const bottom = rowSum(PH - 2);
+      ok(top > 3 && bottom > 3, `上下边缘有背景而不是黑条（top=${top} bottom=${bottom}）`);
+    }
+
+    // 明亮内容（标题/水晶/按钮）应当水平居中
+    {
+      const d = pctx.getImageData(0, 0, PW, PH).data;
+      let bx0 = PW, bx1 = -1;
+      for (let y = 0; y < PH; y++) {
+        for (let x = 0; x < PW; x++) {
+          const i = (y * PW + x) * 4;
+          if (d[i] + d[i + 1] + d[i + 2] > 150) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; }
+        }
+      }
+      const center = ((bx0 + bx1) / 2) * (cv.width / PW);
+      ok(Math.abs(center - cv.width / 2) <= cv.width * 0.15, `明亮内容水平居中（偏差 ${Math.abs(center - cv.width / 2).toFixed(0)}px）`);
+    }
+    // 触摸：点底栏第二个图标（重来）应重置计时
+    const toScreen = (lx, ly) => ({ x: L.offX + lx * L.scale, y: L.offY + ly * L.scale });
+    const tap = (lx, ly) => {
+      const p = toScreen(lx, ly);
+      wx.__fire('start', { touches: [{ clientX: p.x, clientY: p.y, identifier: 0 }] });
+      wx.__fire('end', { changedTouches: [{ clientX: p.x, clientY: p.y, identifier: 0 }] });
+    };
+
+    tap(360, 700);                  // 进入某处（不命中按钮）
+    const s1 = qa.layout();
+    const bar = game.bottomBar.find((b) => b.id === 'levels');
+    tap(bar.cx, bar.cy);
+    ok(game.phase === 'levels', '微信触摸可打开选关');
+    const cell = game.levelCell(0);
+    tap(cell.x + cell.w / 2, cell.y + cell.h / 2);
+    ok(game.phase === 'play', '微信触摸可进入关卡');
+
+    // 生命周期：切后台冻结计时
+    for (let i = 0; i < 20; i++) game.update(1 / 60);
+    const t0 = game.levelTime;
+    wx.__fire('hide', {});
+    for (let i = 0; i < 20; i++) game.update(1 / 60);
+    ok(game.hidden === true && game.levelTime === t0, '切后台后关卡冻结');
+    wx.__fire('show', {});
+    ok(game.hidden === false, '回前台恢复');
+
+    // 广告位为空时：不创建实例，直接回到游戏
+    game.startLevel(24);
+    game.hintTier = 0;
+    game.startAd(() => { game.__rewarded0 = true; });
+    await wait(60);
+    ok(wx.__adLog.created === 0, '广告位为空时不创建广告实例');
+    ok(!game.__rewarded0 && game.modal === null, '广告位为空时不发奖且回到游戏');
+
+    // 装上测试广告位，继续验证真实链路
+    qa.ads.configure({ provider: 'wx', adUnitId: 'adunit-test' });
+    const hintBtn = game.bottomBar.find((b) => b.id === 'hint');
+    tap(hintBtn.cx, hintBtn.cy);
+    ok(game.modal === 'hint', '打开提示面板');
+    const row = game.hintRow(2);
+    tap(row.x + 40, row.y + row.h / 2);
+    ok(game.modal === 'ad', '需要广告时进入广告态');
+    ok(wx.__adLog.show === 1, '调用了 wx 广告的 show');
+    await wait(60);
+    window.__ad().__close({ isEnded: true });
+    await wait(60);
+    ok(game.modal === null && game.hintTier === 3, '完整观看后解锁提示');
+
+    // 提前关闭不发奖
+    game.hintTier = 0;
+    game.modal = null;
+    game.startAd(() => { game.__rewarded = true; });
+    await wait(20);
+    window.__ad().__close({ isEnded: false });
+    await wait(60);
+    ok(!game.__rewarded, '提前关闭不发放奖励');
+
+    // 广告错误：不阻塞游戏
+    game.modal = null;
+    game.startAd(() => { game.__rewarded2 = true; });
+    await wait(20);
+    window.__ad().__error({ errCode: 1004, errMsg: 'no advertisement' });
+    await wait(60);
+    ok(!game.__rewarded2 && game.modal === null, '无填充时回到游戏且不发奖');
+
+    // 切到 safe 应该降低 backing，但布局矩形仍然铺满
+    const q1 = qa.setQuality('safe');
+    await wait(60);
+    const Ls = qa.layout();
+    ok(qsOk(), `切到 safe 后 DPR=${Ls.dpr}、画布 ${Ls.canvas.w}x${Ls.canvas.h}`);
+    ok(Math.abs(Ls.content.w / Ls.canvas.w - 1) < 0.06, `safe 档仍然铺满宽度 ${((Ls.content.w / Ls.canvas.w) * 100).toFixed(1)}%`);
+    qa.setQuality('standard');
+    await wait(120);
+
+    // resize：窗口变化后布局、画布、触摸映射一起更新
+    wx.__setSize(430, 932);
+    wx.__fire('resize', {});
+    await wait(80);
+    const L2 = qa.layout();
+    ok(L2.canvas.w === 430 * L2.dpr && L2.canvas.h === 932 * L2.dpr, `resize 后画布 ${L2.canvas.w}x${L2.canvas.h}`);
+    ok(Math.abs(L2.content.w / L2.canvas.w - 1) < 0.06, `resize 后仍然铺满宽度 ${((L2.content.w / L2.canvas.w) * 100).toFixed(1)}%`);
+    ok(Math.abs(L2.content.x + L2.content.w / 2 - L2.canvas.w / 2) <= 2, 'resize 后仍然居中');
+    wx.__setSize(390, 844);
+    wx.__fire('resize', {});
+    await wait(80);
+
+    // 存档：走 wx 存储（装备皮肤会立即持久化）
+    game.save.skins.unlocked.push('azure');
+    game.equipSkin('azure');
+    const raw = wx.__store['projection.save.v3'];
+    ok(!!raw && raw.includes('azure'), `存档写入 wx 存储（${Object.keys(wx.__store).join(',') || '空'}）`);
+    ok(game.skin.id === 'azure', '切换皮肤后立即生效');
+  }
+
+  const pass = out.filter((l) => l.startsWith('PASS')).length;
+  const el = document.getElementById('result');
+  if (SHOT) el.style.display = 'none';
+  // 截图：把游戏摆到一个固定的代表性状态（第 25 关、无弹窗、淡入结束）
+  if (SHOT && game) {
+    game.startLevel(24);
+    game.modal = null;
+    game.fade = 0;
+    window.__snapAtFrame = (window.__frames ? window.__frames() : 0) + 12;
+  }
+  el.textContent = `WXHARNESS ${pass}/${out.length}\n` + out.join('\n');
+  document.title = `WXHARNESS ${pass}/${out.length}`;
+
+ } catch (err) {
+  const el = document.getElementById('result');
+  el.textContent = 'THREW ' + (err && err.stack ? err.stack : err);
+  document.title = 'WXHARNESS ERROR';
+ }
+})();
+</script>
+</body>
+</html>
