@@ -9,6 +9,7 @@
 | --- | --- |
 | 微信小游戏工程 | ✅ `wechat/`，可导入开发者工具 |
 | 构建产物 | ✅ 110,299 bytes（约 108 KB），buildId `d41bb877a15d` |
+| 可下载构建包 | ✅ [v0.5.0 release](https://github.com/theonlin0725/just-a-little-light/releases/tag/v0.5.0) |
 | 静态校验 | ✅ `npm run verify:wechat` 全部通过 |
 | AppID | ✅ 已写入 `config/wechat.config.json`（`wxa2d0086126adf6fb`） |
 | 激励视频代码 | ✅ 已接 `wx.createRewardedVideoAd` |

@@ -518,7 +518,7 @@ node server.mjs
 # → http://127.0.0.1:5183
 ```
 
-微信小游戏版（构建产物已提交，可直接导入开发者工具）：
+微信小游戏版（构建产物已提交，可直接导入开发者工具）；不想 clone 也可以直接下载 [v0.5.0 微信构建包](https://github.com/theonlin0725/just-a-little-light/releases/tag/v0.5.0)：
 
 ```bash
 npm install          # 只为构建工具 esbuild
