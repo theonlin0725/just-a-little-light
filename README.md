@@ -12,7 +12,7 @@
 [微信小游戏工程](wechat/) ·
 [设计手记](docs/DESIGN.md) ·
 [迭代日志](docs/ITERATION.md) ·
-[后续版本](docs/ROADMAP.md)
+[**V2 设计提案**](docs/V2-PLAN.md)
 
 [![test](https://github.com/theonlin0725/just-a-little-light/actions/workflows/test.yml/badge.svg)](https://github.com/theonlin0725/just-a-little-light/actions/workflows/test.yml)
 
@@ -376,6 +376,8 @@ v0.4 结束时，60 关全部可解，自动化全绿。但我自己连着玩，
 
 ## 05 后续版本：奖励货币 + 更多玩法
 
+> 这一节是 v0.5 时的轻量路线。收到用户反馈后，我出了更完整的 [V2 重做方案](docs/V2-PLAN.md)：前 20 关重做引导、21–29 过渡、30–60 加入镜面/棱镜、20 秒冻结计时、光尘商城和激励视频。**以 V2 方案为准**，下面保留为早期思路。
+
 ### 5.1 光尘：给广告之外第二条路
 
 现在的皮肤只能看广告解锁，广告是唯一入口。这有两个问题：
@@ -553,7 +555,8 @@ npm run verify:wechat
 | [关卡设计](docs/LEVELS.md) | 60 关分组、机制表、第 37–60 关设计简表 |
 | [工程说明](docs/ENGINEERING.md) | 架构、生成器、测试与微信适配 |
 | [微信小游戏](docs/WECHAT.md) | 导入、构建、AppID、广告位与真机清单 |
-| [后续版本](docs/ROADMAP.md) | 光尘经济、每日一关、无尽模式与优先级 |
+| [**V2 设计提案**](docs/V2-PLAN.md) | 从 40 秒到 3 分钟：引导、镜面/棱镜、20 秒计时、光尘商城、广告与埋点 |
+| [早期后续版本](docs/ROADMAP.md) | v0.5 时的轻量路线（已被 V2 取代，保留作对照） |
 | [共创记录](docs/BRIEFS.md) | 我给 Harness 的原始需求摘录 |
 | [原始交接文档](docs/changelog/) | 第 2–5 轮的完整 changelog |
 | [关卡审查表](docs/audit/LEVEL-AUDIT.md) | 60 关逐关的可行解区与相似度 |
