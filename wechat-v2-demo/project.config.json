@@ -1,0 +1,19 @@
+{
+  "appid": "touristappid",
+  "projectname": "就差一点光 V2 试玩",
+  "description": "就差一点光 · 光影解谜小游戏",
+  "compileType": "game",
+  "libVersion": "2.32.3",
+  "setting": {
+    "urlCheck": false,
+    "es6": false,
+    "enhance": false,
+    "postcss": false,
+    "minified": false,
+    "uglyCompile": false
+  },
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  }
+}

@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "node server.mjs",
     "validate": "node scripts/validate-levels.mjs",
-    "test": "node tests/hold.test.mjs && node tests/features.test.mjs && node tests/wx-ad.test.mjs && node tests/viewport.test.mjs && node tests/input-wx.test.mjs && node tests/loop.test.mjs && node tests/timing.test.mjs && node tests/compat.test.mjs && node tests/stability.test.mjs && node tests/clock.test.mjs && node tests/layout.test.mjs && node tests/mirror.test.mjs && node tests/nudge.test.mjs && node tests/playthrough60.test.mjs",
+    "test": "node tests/optics.test.mjs && node tests/gates.test.mjs && node tests/joystick.test.mjs && node tests/tutorial-flow.test.mjs && node tests/beam-game.test.mjs && node tests/hold.test.mjs && node tests/features.test.mjs && node tests/wx-ad.test.mjs && node tests/viewport.test.mjs && node tests/input-wx.test.mjs && node tests/loop.test.mjs && node tests/timing.test.mjs && node tests/compat.test.mjs && node tests/stability.test.mjs && node tests/clock.test.mjs && node tests/layout.test.mjs && node tests/mirror.test.mjs && node tests/nudge.test.mjs && node tests/playthrough60.test.mjs",
+    "test:optics": "node tests/optics.test.mjs && node tests/gates.test.mjs && node tests/joystick.test.mjs && node tests/tutorial-flow.test.mjs",
+    "test:beam": "node tests/beam-game.test.mjs",
     "gen": "node scripts/gen-levels.mjs --write",
     "build:wechat": "node scripts/build-wechat.mjs",
     "verify:wechat": "node scripts/verify-wechat.mjs",

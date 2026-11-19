@@ -39,6 +39,20 @@ const ctx = canvas.getContext('2d');
 const guard = createCtxGuard(ctx);
 const game = new Game();
 
+/** 启动参数直达 V2 光学试玩：DevTools 里把编译模式/启动参数设为 beam=0..5 */
+let launchQueryApplied = false;
+function applyLaunchQuery(query) {
+  if (launchQueryApplied || !query || query.beam === undefined) return;
+  launchQueryApplied = true;
+  const i = Math.max(0, Number(query.beam) || 0);
+  game.startBeamDemo(i);
+}
+try {
+  if (wx.getLaunchOptionsSync) applyLaunchQuery(wx.getLaunchOptionsSync().query);
+} catch {
+  /* 低版本或非小游戏环境没有该接口 */
+}
+
 // 微信端默认标准画质（DPR 上限 2），失败会继续降级到 safe
 quality.set('standard');
 
@@ -91,7 +105,7 @@ const touch = createTouchTracker({
     game.pointerDown(p.x, p.y);
   },
   onMove(cx, cy) {
-    if (!game.dragging) return;
+    if (!game.dragging && game.mode !== 'beam') return;
     const p = toLogical(layout, cx, cy);
     game.pointerMove(p.x, p.y);
   },
@@ -112,11 +126,12 @@ wx.onHide(() => {
   touch.reset(); // 切后台时把拖动状态清掉，避免回来还粘着
   sfx.suspend();
 });
-wx.onShow(() => {
+wx.onShow((res) => {
   refreshViewport('show'); // 旋转 / 分屏 / 从后台回来都可能改窗口
   last = Date.now();
   game.setHidden(false);
   sfx.resume();
+  applyLaunchQuery(res && res.query);
 });
 if (wx.onWindowResize) {
   wx.onWindowResize(() => refreshViewport('resize'));

@@ -1,6 +1,7 @@
 // 微信小游戏运行时不支持的 API 静态扫描。
 // 只扫"两个平台共用"的模块，web 专属代码（main.js / share.js 的 DOM 部分）不算。
 import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 let pass = 0;
 let fail = 0;
@@ -10,6 +11,8 @@ const SHARED = [
   'render.js', 'game.js', 'geometry.js', 'levels.js', 'config.js',
   'content.js', 'ads.js', 'audio.js', 'skins.js', 'tutorial.js',
   'viewport.js', 'input-wx.js', 'loop.js', 'platform.js', 'qa-wx.js', 'main-wx.js',
+  'optics.js', 'optics-scenes.js', 'gates.js', 'joystick.js', 'tutorial-flow.js',
+  'beam-game.js', 'beam-levels.js', 'beam-render.js',
 ];
 
 // 这些在微信小游戏里不存在或不可靠
@@ -27,7 +30,7 @@ const BANNED_PURE = [
   { re: /\blocalStorage\b/, why: '应走 plat.getStorage/setStorage' },
 ];
 
-const dir = new URL('../src/', import.meta.url).pathname;
+const dir = fileURLToPath(new URL('../src/', import.meta.url));
 const files = readdirSync(dir).filter((f) => SHARED.includes(f));
 ok(files.length >= 14, `扫描 ${files.length} 个共享模块`);
 
