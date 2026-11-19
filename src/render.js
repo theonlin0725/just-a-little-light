@@ -7,6 +7,7 @@ import { quality } from './quality.js';
 import { nudgeVisible } from './nudge.js';
 import { computeSceneLayout, sceneMatrix, sceneToScreen } from './layout.js';
 import { ads } from './ads.js';
+import { drawBeam } from './beam-render.js';
 
 /**
  * 叠加模式：Web 用 'lighter' 保持既有观感；
@@ -1176,6 +1177,7 @@ function drawTitle(ctx, g, time) {
   });
   pill(ctx, g.ui.levels, { label: '选关' });
   pill(ctx, g.ui.skins, { label: `光源皮肤 · ${g.skin.name}` });
+  pill(ctx, g.ui.beam, { label: 'V2 光学试玩 · 5 个新机制' });
 
   const audio = (g.save && g.save.audio) || { bgm: true, sfx: true };
   audioToggle(ctx, g, g.ui.audioBgm, audio.bgm, '音乐');
@@ -1645,6 +1647,11 @@ function drawSkins(ctx, g, time) {
 /* ---------------- 主绘制 ---------------- */
 
 export function draw(ctx, g, time) {
+  if (g.mode === 'beam') {
+    drawBeam(ctx, g, time);
+    return;
+  }
+
   // ---- 背景层：cover 铺满整个窗口（含信箱区），消除上下黑条 ----
   drawFullBleed(ctx, g, time);
 

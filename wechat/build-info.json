@@ -1,14 +1,14 @@
 {
-  "buildId": "d41bb877a15d",
-  "builtAt": "2026-10-26T14:00:18.378Z",
+  "buildId": "4e3a65ebf1db",
+  "builtAt": "2026-11-19T10:41:14.135Z",
   "channel": "release",
   "appid": "wxa2d0086126adf6fb",
   "adUnitId": null,
   "qa": false,
   "minified": true,
   "libVersion": "2.32.3",
-  "bytes": 110299,
-  "sha256": "6070160aaef67d8f28016a05e6b3d2c1cc6ec05ef0476bfa7009bad8b6a14b81",
+  "bytes": 148143,
+  "sha256": "e8930254256c65dec5fcba0e93f1be5a75d8cdb94b5e4ed1e2997e32227c1d99",
   "files": [
     "game.js",
     "game.json",

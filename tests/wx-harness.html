@@ -302,6 +302,16 @@ window.addEventListener('unhandledrejection', (e) => {
     const raw = wx.__store['projection.save.v3'];
     ok(!!raw && raw.includes('azure'), `存档写入 wx 存储（${Object.keys(wx.__store).join(',') || '空'}）`);
     ok(game.skin.id === 'azure', '切换皮肤后立即生效');
+
+    // V2 光学试玩：入口、3 秒保持、返回经典首页
+    game.startBeamDemo(0);
+    ok(game.mode === 'beam' && game.phase === 'play', '微信端可进入光学试玩');
+    game.beam.place('p0', 360, 640);
+    game.beam.started = true;
+    for (let i = 0; i < 240; i++) game.update(1 / 60);
+    ok(game.beam.phase === 'win' && game.beam.hold >= 3, '微信端光学关保持 3 秒通关');
+    game.exitBeamDemo();
+    ok(game.mode === 'classic' && game.phase === 'title', '微信端从光学试玩返回经典首页');
   }
 
   const pass = out.filter((l) => l.startsWith('PASS')).length;

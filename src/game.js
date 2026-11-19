@@ -9,6 +9,7 @@ import { mechanismForLevel, isBasicTutorial, teachesDualLight } from './tutorial
 import { plat } from './platform.js';
 import { createNudgeState, stepAttempt, showNudge, dismissNudge, nudgeVisible, resetRun, resetLevel } from './nudge.js';
 import { inBand, screenToScene, sceneToScreen, screenDirToScene, resolveDir, computeSceneLayout } from './layout.js';
+import { BeamSession } from './beam-game.js';
 
 const SAVE_KEY = 'projection.save.v3';
 const OLD_KEYS = ['projection.save.v2', 'projection.save.v1'];
@@ -74,6 +75,8 @@ export class Game {
   constructor() {
     this.save = loadSave();
     this.phase = 'title'; // title | levels | play | win
+    this.mode = 'classic'; // classic | beam（V2 光学试玩）
+    this.beam = null;
     this.modal = null; // null | 'hint' | 'ad' | 'share' | 'skins'
     this.skin = skinById(this.save.skins.equipped);
     this.removed = new Set(); // 'b0' 静态 / 'm1' 移动，只对当前这局有效
@@ -188,6 +191,39 @@ export class Game {
     this.fade = 0.7;
   }
 
+  /** 进入 V2 光学试玩：不改动经典 60 关的进度与存档 */
+  startBeamDemo(index = 0) {
+    this.mode = 'beam';
+    this.phase = 'play';
+    this.modal = null;
+    this.dragging = false;
+    this.pressedBtn = null;
+    this.hoverBtn = null;
+    this.removeMode = false;
+    this.hint = null;
+    this.result = null;
+    this.beam = new BeamSession({
+      start: index,
+      onExit: () => this.exitBeamDemo(),
+      onWin: () => sfx.win(),
+    });
+    this.fade = 1;
+    sfx.unlock();
+  }
+
+  exitBeamDemo() {
+    this.mode = 'classic';
+    this.beam = null;
+    this.phase = 'title';
+    this.dragging = false;
+    this.pressedBtn = null;
+    this.hoverBtn = null;
+    this.modal = null;
+    this.result = null;
+    this.buildLevel(this.attractLevel);
+    this.fade = 1;
+  }
+
   /** 进入新一局前必须清掉的输入/弹窗瞬态（不依赖调用者碰巧清理） */
   clearTransient() {
     this.dragging = false;
@@ -201,6 +237,10 @@ export class Game {
   }
 
   next() {
+    if (this.mode === 'beam') {
+      if (this.beam) this.beam.next();
+      return;
+    }
     const n = this.levelIndex + 1;
     if (n < LEVELS.length) this.startLevel(n);
     else this.goHome(); // 末关按钮文案是"回到首页"，行为必须一致
@@ -213,11 +253,15 @@ export class Game {
   /** 切后台 / 系统中断：与弹窗相互独立，任一个都算暂停 */
   setHidden(v) {
     this.hidden = !!v;
-    if (v) this.dragging = false;
+    if (v) {
+      this.dragging = false;
+      if (this.beam) this.beam.pointerUp();
+    }
   }
 
   /** 是否有全屏界面挡着关卡 */
   get paused() {
+    if (this.mode === 'beam') return !!this.hidden;
     return (
       this.hidden ||
       this.phase === 'levels' ||
@@ -234,6 +278,11 @@ export class Game {
     this.t += dt;
     this.fade = Math.max(0, this.fade - dt * 2.2);
     this.shake = Math.max(0, this.shake - dt * 3);
+
+    if (this.mode === 'beam') {
+      if (!this.hidden && this.beam) this.beam.update(dt);
+      return;
+    }
 
     // 面板（广告 / 皮肤 / 提示 / 分享）和选关界面打开时冻结关卡：
     // 不走路、不计时、不累计保持时间，关掉之后也不会因为时间跳变直接通关
@@ -574,6 +623,11 @@ export class Game {
 
   /** 底栏五个动作的唯一切入口（点击与无障碍按钮都走这里） */
   activate(id) {
+    if (this.mode === 'beam') {
+      if (id === 'restart') this.beam && this.beam.restart();
+      else if (id === 'home') this.exitBeamDemo();
+      return;
+    }
     if (id === 'hint') {
       if (this.phase === 'play') {
         dismissNudge(this.nudge); // 玩家已经去看灯泡了
@@ -686,6 +740,10 @@ export class Game {
 
   /** 返回首页：清干净拖动 / 计时 / 遮罩，但保留存档 */
   goHome() {
+    if (this.mode === 'beam') {
+      this.exitBeamDemo();
+      return;
+    }
     this.dragging = false;
     this.removeMode = false;
     this.removeSel = null;
@@ -737,6 +795,10 @@ export class Game {
   /* ---------------- 输入 ---------------- */
 
   pointerDown(x, y) {
+    if (this.mode === 'beam') {
+      if (this.beam) this.beam.pointerDown(x, y);
+      return;
+    }
     if (this.modal === 'ad') return;
 
     if (this.modal === 'share') {
@@ -791,6 +853,9 @@ export class Game {
       } else if (this.inRect(this.ui.skins, x, y)) {
         sfx.unlock();
         this.modal = 'skins';
+      } else if (this.inRect(this.ui.beam, x, y)) {
+        sfx.unlock();
+        this.startBeamDemo();
       } else if (this.inRect(this.ui.audioBgm, x, y)) {
         this.toggleAudio('bgm');
       } else if (this.inRect(this.ui.audioSfx, x, y)) {
@@ -850,6 +915,10 @@ export class Game {
   }
 
   pointerMove(x, y) {
+    if (this.mode === 'beam') {
+      if (this.beam) this.beam.pointerMove(x, y);
+      return;
+    }
     if (!this.dragging || this.phase !== 'play' || this.modal || this.removeMode) return;
     // 拖动过程中允许手指移出玩法带，但坐标始终按同一套逆变换
     const sp = screenToScene({ x, y }, this.sceneLayout, this.sceneDir);
@@ -857,6 +926,10 @@ export class Game {
   }
 
   pointerUp() {
+    if (this.mode === 'beam') {
+      if (this.beam) this.beam.pointerUp();
+      return;
+    }
     this.dragging = false;
   }
 
@@ -881,6 +954,7 @@ export class Game {
   }
 
   nudge(dx, dy) {
+    if (this.mode === 'beam') return;
     if (this.phase !== 'play' || this.modal || this.removeMode) return;
     // 传进来的是"屏幕方向"，先转成逻辑方向，玩家按上下左右才和画面对得上
     const d = screenDirToScene(dx, dy);
@@ -901,8 +975,9 @@ export class Game {
       start: { x: 250, y: 690, w: 220, h: 78 },
       levels: { x: 250, y: 786, w: 220, h: 56 },
       skins: { x: 250, y: 862, w: 220, h: 56 },
-      audioBgm: { x: 128, y: 952, w: 212, h: 54 },
-      audioSfx: { x: 380, y: 952, w: 212, h: 54 },
+      beam: { x: 250, y: 926, w: 220, h: 56 },
+      audioBgm: { x: 128, y: 998, w: 212, h: 54 },
+      audioSfx: { x: 380, y: 998, w: 212, h: 54 },
       // 底栏五个图标（见 bottomBar），这里不再保留文字按钮矩形
       back: { x: 172, y: 1090, w: 180, h: 56 },
       skinClose: { x: 250, y: 830, w: 220, h: 56 },

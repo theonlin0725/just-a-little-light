@@ -18,6 +18,10 @@ export function installQa({ game, buildId, adUnitId, layout, ads, extra }) {
     jumpTo(i) {
       game.startLevel(i);
     },
+    jumpToBeam(i = 0) {
+      game.startBeamDemo(i | 0);
+      console.log(`[qa] beam level ${i | 0}`);
+    },
     grantSkin(id) {
       if (!game.save.skins.unlocked.includes(id)) game.save.skins.unlocked.push(id);
       game.equipSkin(id);

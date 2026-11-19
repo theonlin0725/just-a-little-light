@@ -57,7 +57,7 @@ canvas.addEventListener('pointermove', (e) => {
   const p = toLogical(e.clientX, e.clientY);
   // 鼠标才有悬停提示；触摸不依赖它
   if (e.pointerType === 'mouse') game.hoverBtn = game.buttonAt(p.x, p.y);
-  if (!game.dragging) return;
+  if (!game.dragging && game.mode !== 'beam') return;
   e.preventDefault();
   game.pointerMove(p.x, p.y);
 });
@@ -79,7 +79,7 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowRight') game.nudge(step, 0);
   else if (e.key === 'r' || e.key === 'R') game.activate('restart');
   else if (e.key === 'h' || e.key === 'H') game.activate('hint');
-  else if (e.key === 'Enter' && game.phase === 'win') game.next();
+  else if (e.key === 'Enter' && (game.phase === 'win' || (game.mode === 'beam' && game.beam && game.beam.phase === 'win'))) game.next();
   else return;
   e.preventDefault();
 });
@@ -126,6 +126,10 @@ requestAnimationFrame(frame);
 
 // 调试入口：?level=4&light=150,660&nofade=1
 const q = new URLSearchParams(location.search);
+if (q.has('beam')) {
+  const i = Math.max(0, Number(q.get('beam')) || 0);
+  game.startBeamDemo(i);
+}
 if (q.has('level')) {
   const i = Math.max(0, Math.min(LEVELS.length - 1, Number(q.get('level')) - 1));
   game.startLevel(i, { resetTime: true });
@@ -174,6 +178,13 @@ if (q.has('skin')) {
 }
 if (q.has('active')) game.active = Number(q.get('active')) || 0;
 
+// QA 钩子：只在 ?qa=1 时暴露，供真机/浏览器自动化读取状态和坐标换算
+if (q.has('qa')) {
+  window.__game = game;
+  window.__toScreen = (x, y) => ({ x: offX + x * scale, y: offY + y * scale });
+  window.__toLogical = (x, y) => toLogical(x, y);
+}
+
 /* ---------------- 无障碍：给两个图标按钮真实的可聚焦按钮 ---------------- */
 const bind = (id, fn) => {
   const el = document.getElementById(id);
@@ -190,13 +201,15 @@ function syncA11y() {
   const el = document.getElementById('a11y-status');
   if (!el) return;
   el.textContent =
-    game.modal === 'skins'
-      ? `光源皮肤面板，当前装备 ${game.skin.name}`
-      : game.phase === 'levels'
-        ? '选关界面'
-        : game.phase === 'play'
-          ? `第 ${game.levelIndex + 1} 关 ${game.level.name}`
-          : '首页';
+    game.mode === 'beam' && game.beam
+      ? `光学试玩，第 ${game.beam.index + 1} 关 ${game.beam.level.name}`
+      : game.modal === 'skins'
+        ? `光源皮肤面板，当前装备 ${game.skin.name}`
+        : game.phase === 'levels'
+          ? '选关界面'
+          : game.phase === 'play'
+            ? `第 ${game.levelIndex + 1} 关 ${game.level.name}`
+            : '首页';
 }
 setInterval(syncA11y, 500);
 
